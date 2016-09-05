@@ -15,6 +15,7 @@
 
 #include <iostream>
 #include <cstdio>
+#include <string.h>
 #include <iomanip>
 #include <stdlib.h>
 #include <NTL/ZZ.h> // NTL library 
@@ -35,36 +36,18 @@ using namespace std;
 using namespace NTL; // use NTL namespace
 
 /* MD5 */
-int MD5_Gen(unsigned char *md5, char *filename)
+int MD5_Gen(unsigned char *md5, const char *name)
 {
-    FILE *fd=fopen(filename,"r");  
     MD5_CTX c;  
-    if(fd == NULL)  
-    {  
-        cout << filename << " open failed" << endl;
-        return ERROR;
-    }  
 
     int len;  
-    unsigned char *pData = (unsigned char*)malloc(1024*1024*1024);  
-
-    if(!pData)  
-    {  
-        cout << "malloc failed" << endl;  
-        return ERROR;  
-    }  
-
+    unsigned char *pData = (unsigned char *)name;
+    
     MD5_Init(&c);  
-
-    while( 0 != (len = fread(pData, 1, 1024*1024*1024, fd) ) )  
-    {  
-        MD5_Update(&c, pData, len);  
-    }  
+    len = strlen(name);
+    MD5_Update(&c, pData, len);  
 
     MD5_Final(md5,&c);  
-
-    fclose(fd);  
-    free(pData);  
 
     return OK;
 }
@@ -153,46 +136,8 @@ int ElGamal_Sign(ZZ md5_zz, ZZ &p, ZZ &alpha, ZZ &a, ZZ *sig)
     return OK;
 }
 
-/* signature generation */
-int ElGamal_Gen(ZZ &p, ZZ &alpha, ZZ &beta, ZZ &a)
+int ElGamal_Print(ZZ &p, ZZ &alpha, ZZ &beta, ZZ &a)
 {
-    ZZ q0;
-    // get p
-    ZZ r; // p = r*q0 + 1
-    srand(time(0));
-    r = rand() % INTEGER;
-    while(1){
-        GenPrime(q0, ELGAMAL_PRIME_LENGTH);
-        p = r * q0 + 1;
-        if(ProbPrime(p)) // p is prime then break
-            break;
-    }
-    // get a
-    ZZ pp;
-    pp = p - 1;
-    RandomBnd(a, pp); // Should I set a seed?
-    // get alpha
-    vector<ZZ> factors;
-    Gen_Factor(r, factors); // parse the factors of p-1
-    factors.push_back(q0); // p-1 = q0 * r, so add q0
-    int flag;
-    while(1){
-        flag = YES;
-        RandomBnd(alpha, p);
-        vector<ZZ>::iterator it;
-        for(it = factors.begin(); it != factors.end(); it++){
-            if(PowerMod(alpha, pp/(*it), p) == 1){
-                flag = NO;
-                break;
-            }
-        }
-        if(flag == YES)
-            break;
-    } 
-
-    // get beta
-    beta = PowerMod(alpha, a, p);
-
     cout << "----------------------------------------" << endl;
     cout << "ElGamal Public key:" << endl;
     cout << "p: " << p << endl;
@@ -213,8 +158,6 @@ int ElGamal_verify(ZZ md5_ver_zz, ZZ p, ZZ alpha, ZZ beta, ZZ *sig)
     bggd = (PowerMod(beta, sig[GAMMA], p) * PowerMod(sig[GAMMA], sig[DELTA], p)) % p; 
     axp = PowerMod(alpha, md5_ver_zz, p);
 
-    cout << "Now file's MD5_ZZ: " << endl;
-    cout << md5_ver_zz << endl;
     cout << "((Beta^Gamma)*(Gamma^Delta)) mod p:" << endl;
     cout << bggd << endl;
     cout << "(Alpha^MD5) mod p:" << endl;
@@ -288,47 +231,52 @@ int RSA_verify(ZZ md5_ver_zz, ZZ sig, ZZ n, ZZ b)
     }
 }
 
-/* Print the usage */
-void Usage(char *filename)
-{
-    cout << "Usage:" << endl;
-    cout << "\t" << filename << " Alice-FILENAME Bob-FILENAME" << endl;
-}
-
 int main(int argc, char **argv)
 {
-    if(argc != 3){
-        Usage(argv[0]);
-        return 0;
-    }
-    
     cout << "Protocol 9.6 Test..." << endl;
     cout << "----------------------" << endl;
     cout << "P.S. We ignore the generation of certificate" << endl;
     cout << "     TA uses RSA Algorithm to sign; ElGamal for others" << endl;
+    cout << "     ID(Alice) = \"Alice\"  ID(Bob) = \"Bob\"" << endl;
     cout << "----------------------" << endl;
 // Firstly, TA generates certificates for Bob and Alice
 // TA uses RSA, while it generates ElGamal certificates for Bog, Alice.
     unsigned char md5_a[17] = {0};
     unsigned char md5_b[17] = {0};
     ZZ md5_a_zz, md5_b_zz;
-    cout << "Generate Alice's pub/pri key..." << endl;
-    if(MD5_Gen(md5_a, argv[1]) == ERROR){
+    cout << "Alice's pub/pri key:" << endl;
+    if(MD5_Gen(md5_a, "Alice") == ERROR){
         return ERROR;
     }
     MD5_ZZ(md5_a, md5_a_zz);
     ZZ p_a, alpha_a, beta_a, a_a;
-    ElGamal_Gen(p_a, alpha_a, beta_a, a_a);
-    cout << endl << endl;
-
-    cout << "Generate Bob's pub/pri key..." << endl;
-    if(MD5_Gen(md5_b, argv[2]) == ERROR){
+    conv(p_a,
+    "80757801739461444376375076117462438809231992938697728838861479046791746617865323647383285380969791583219601608743347485950390997675587344904650053251515604847895215756531804158228157502253494743918892374020889447425704775531845939069208962536448065661067274098858478944632870211831619434912844780834664335755929");
+    conv(alpha_a,
+    "47137054963367559060867808541127380795787353211537798330395301468634140947325148127250148172700854104434242673380631251038701647715559391807880424797675968348340457111731851219367658154794026855851438197290501111886594351414419618574525000819034271815290897573205805883206166595197791470439534818319012247816039");
+    conv(beta_a,
+    "75822460250027107914970116964181032004032344913798526018466030476443076960645854945246614301999821624475093854139044562354511946449279530015779410907969117956611590197327176647673356360595267208510485635550907320366199006965502635349640240932093557059293334624945211092126365366900007146131550512885124202010035");
+    conv(a_a,
+    "27602905112968643282747339399639880715169485677889407537672951526759298478254380985929613867058219003994184483951205543503885568664928685280085504577860108676312629727377009121707748080089177179759885747060269987509167579951095433156852282654549286485854427570682619318924250733362814845872803130466928008425090");
+    ElGamal_Print(p_a, alpha_a, beta_a, a_a);
+    cout << endl;
+    cout << "Bob's pub/pri key:" << endl;
+    if(MD5_Gen(md5_b, "Bob") == ERROR){
         return ERROR;
     }
     MD5_ZZ(md5_b, md5_b_zz);
     ZZ p_b, alpha_b, beta_b, a_b;
-    ElGamal_Gen(p_b, alpha_b, beta_b, a_b);
+    conv(p_b,
+    "149432269103858053684213815122297781864722087914301874779908471945247575519160246670697422640821388062363614751439585101753945935759890896822599773208491274093634851328631726722911221097332153458220166209113798551213377095535346102011167673144507286073140681080686484878954544603707314706764556627376466256685211");
+    conv(alpha_b,
+    "65999146220466345754488507619029722842511672010868706346622270489535061521021956508230871951335209047658576385390371438507244398983605013565085675530803976611116428702193697761375722470807596032839944303583343362550344408731939573604930779417522162489573992587022738018666781505620558786413875025863942706587119");
+    conv(beta_b,
+    "100815518475849632077982767420043386633704412471980202189594428003992052701604881052848689454488375697557068358983913686247490079072890919324407116914495176325001443631730080814747136226936769948990936677944343070827669799872157690931694223378083498300541101789872382845247744770716622104812367670181554740057683");
+    conv(a_b,
+    "111858037259932300115162723522660548405633968033154311868386905422919187524302444793849711574401910698163970589920152244618812295527842251288507865840952943066435264472514293721643919429336602340758614250885602147338408060954915836329704399136489962079626739777215026550934561020497485124322227505481296858502184");
+    ElGamal_Print(p_b, alpha_b, beta_b, a_b);
     cout << endl << endl;
+
     // TA signs for Bob and Alice to generate their certificates
     ZZ format_data_a, format_data_b;
     format_data_a = md5_a_zz + p_a % md5_a_zz + alpha_a % md5_a_zz

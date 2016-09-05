@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <iomanip>
 #include <stdlib.h>
+#include <string.h>
 #include <NTL/ZZ.h> // NTL library 
 #include <openssl/md5.h> // use libcrypto
 #include <time.h>
@@ -27,36 +28,19 @@ using namespace std;
 using namespace NTL; // use NTL namespace
 
 /* MD5 */
-int MD5_gen(unsigned char *md5, char *filename)
+int MD5_gen(unsigned char *md5, const char *name)
 {
-    FILE *fd=fopen(filename,"r");  
     MD5_CTX c;  
-    if(fd == NULL)  
-    {  
-        cout << filename << " open failed" << endl;
-        return ERROR;
-    }  
 
     int len;  
-    unsigned char *pData = (unsigned char*)malloc(1024*1024*1024);  
-
-    if(!pData)  
-    {  
-        cout << "malloc failed" << endl;  
-        return ERROR;  
-    }  
+    len = strlen(name);
+    unsigned char *pData = (unsigned char*)name;  
 
     MD5_Init(&c);  
 
-    while( 0 != (len = fread(pData, 1, 1024*1024*1024, fd) ) )  
-    {  
-        MD5_Update(&c, pData, len);  
-    }  
+    MD5_Update(&c, pData, len);  
 
     MD5_Final(md5,&c);  
-
-    fclose(fd);  
-    free(pData);  
 
     return OK;
 }
@@ -134,22 +118,12 @@ int RSA_verify(ZZ md5_ver_zz, ZZ sig, ZZ n, ZZ b)
     return OK;
 }
 
-/* Print the usage */
-void Usage(char *filename)
-{
-    cout << "Usage:\n" << "\t" << filename << " ALICE-FILENAME" << endl;
-}
-
 int main(int argc, char **argv)
 {
-    if(argc != 2){
-        Usage(argv[0]);
-        return 0;
-    }
 // Generate ID(Alice) -- MD5 (Require Ailice in a file)
     unsigned char md5[17] = {0};
     
-    if(MD5_gen(md5, argv[1]) == ERROR){
+    if(MD5_gen(md5, "Alice") == ERROR){
         return ERROR;
     }
     ZZ md5_zz; // ID(Alice)
