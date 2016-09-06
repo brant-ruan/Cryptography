@@ -69,51 +69,6 @@ int MD5_ZZ(unsigned char *md5, ZZ &md5_zz)
     return OK; 
 }
 
-/* add a factor to the vector */
-int Add_Factor(ZZ x, vector<ZZ> &factors)
-{
-    vector<ZZ>::iterator it;
-    for(it = factors.begin(); it != factors.end(); it++){
-        if(*it == x)
-            return OK;
-    }
-    factors.push_back(x);
-
-    return OK;
-}
-
-/* to get factors of r */
-int Gen_Factor(ZZ r, vector<ZZ> &factors)
-{
-    if(ProbPrime(r)) // r is prime, then add it
-        Add_Factor(r, factors);
-    else{
-        long p;
-        PrimeSeq s;
-        p = s.next();
-        ZZ tmp;
-        while(1){
-            if(ProbPrime(r)){ // r is prime, then add it
-                Add_Factor(r, factors);
-                break;
-            }
-            else if(r == 1 || r == 0) // end of parse
-                break;
-            if(r % p == 0){ // p is prime of r, add p
-                tmp = p;
-                Add_Factor(tmp, factors);
-                r = r / p;
-                s.reset(2);
-                p = s.next();
-            }
-            else{ // p is not prime of r, continue
-                p = s.next();
-            }
-        }
-    }
-    return OK;
-}
-
 /* ElGamal signature function */
 int ElGamal_Sign(ZZ md5_zz, ZZ &p, ZZ &alpha, ZZ &a, ZZ *sig)
 {
@@ -122,7 +77,11 @@ int ElGamal_Sign(ZZ md5_zz, ZZ &p, ZZ &alpha, ZZ &a, ZZ *sig)
     // get signature
     ZZ k, k_inv; // k is a secret random number;
                 // k_inv is its inverse element mod p-1
-    RandomBnd(k, pp);
+    while(1){
+        RandomBnd(k, pp);
+        if(GCD(k, pp) == 1)
+            break;
+    }
     sig[GAMMA] = PowerMod(alpha, k, p);
     
     ZZ temp, gcd, t;

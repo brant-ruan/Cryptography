@@ -8,7 +8,7 @@
  * Function:
  *  Task 2 for Cryptography mission
  * Idea:
- *  
+ *  ElGamal Algorithm
  * 
 **/
 
@@ -155,10 +155,10 @@ int ElGamal_sign(ZZ md5_zz, ZZ &p, ZZ &alpha, ZZ &beta, ZZ &a, ZZ *sig)
     Gen_Factor(r, factors); // parse the factors of p-1
     factors.push_back(q0); // p-1 = q0 * r, so add q0
     int flag;
+    vector<ZZ>::iterator it;
     while(1){
         flag = YES;
-        RandomBnd(alpha, p);
-        vector<ZZ>::iterator it;
+        RandomBnd(alpha, pp);
         for(it = factors.begin(); it != factors.end(); it++){
             if(PowerMod(alpha, pp/(*it), p) == 1){
                 flag = NO;
@@ -169,13 +169,20 @@ int ElGamal_sign(ZZ md5_zz, ZZ &p, ZZ &alpha, ZZ &beta, ZZ &a, ZZ *sig)
             break;
     } 
 
+    for(it = factors.begin(); it != factors.end(); it++){
+        cout << "factors: " << *it << endl;
+    }
     cout << "get beta..." << endl;
     // get beta
     beta = PowerMod(alpha, a, p);
     // get signature
     ZZ k, k_inv; // k is a secret random number;
                 // k_inv is its inverse element mod p-1
-    RandomBnd(k, pp);
+    while(1){
+        RandomBnd(k, pp);
+        if(GCD(k, pp) == 1)
+            break;
+    }
     sig[GAMMA] = PowerMod(alpha, k, p);
     
     ZZ temp, gcd, t;
@@ -186,6 +193,10 @@ int ElGamal_sign(ZZ md5_zz, ZZ &p, ZZ &alpha, ZZ &beta, ZZ &a, ZZ *sig)
     }
     temp = (md5_zz - a * sig[GAMMA]) % pp;
     sig[DELTA] = (temp * k_inv) % pp;
+    while(sig[DELTA] < 0){
+        sig[DELTA] += pp;
+        sig[DELTA] %= pp;
+    }
 
     cout << "----------------------------------------" << endl;
     cout << "Original file's MD5_ZZ: " << endl;
